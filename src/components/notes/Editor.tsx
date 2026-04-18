@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Pin, Star, Trash2, Hash, Folder as FolderIcon } from "lucide-react";
 import type { Folder, Note } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { RichEditor } from "@/components/notes/RichEditor";
 
 type Props = {
   note: Note | null;
@@ -119,12 +120,13 @@ export function Editor({
             />
           </div>
 
-          <textarea
-            value={note.content}
-            onChange={(e) => onChange({ content: e.target.value })}
-            placeholder="Start writing…"
-            className="mt-6 min-h-[60vh] w-full resize-none bg-transparent text-[15px] leading-7 placeholder:text-muted-foreground/50 focus:outline-none"
-          />
+          <div className="mt-6">
+            <RichEditor
+              key={note.id}
+              value={note.content}
+              onChange={(html) => onChange({ content: html })}
+            />
+          </div>
         </div>
       </div>
     </div>
