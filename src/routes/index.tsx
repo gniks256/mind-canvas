@@ -1,26 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { NotesApp } from "@/components/notes/NotesApp";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Quill — A quiet place for notes" },
+      {
+        name: "description",
+        content:
+          "Minimalist notes app inspired by Apple and Notion. Folders, tags, favorites — private and instant in your browser.",
+      },
+      { property: "og:title", content: "Quill — A quiet place for notes" },
+      {
+        property: "og:description",
+        content:
+          "Minimalist notes app inspired by Apple and Notion. Private, offline, beautiful.",
+      },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. For sites with multiple pages (About, Services, Contact, etc.),
-// create separate route files (about.tsx, services.tsx, contact.tsx) — don't put all pages in this file.
-function PlaceholderIndex() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
-}
-
 function Index() {
-  return <PlaceholderIndex />;
+  return <NotesApp />;
 }

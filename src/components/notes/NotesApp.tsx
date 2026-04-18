@@ -1,0 +1,241 @@
+import { useEffect, useMemo, useState } from "react";
+import { Menu, X } from "lucide-react";
+import { Sidebar } from "@/components/notes/Sidebar";
+import { NoteList } from "@/components/notes/NoteList";
+import { Editor } from "@/components/notes/Editor";
+import { useLocalStorage, uid } from "@/lib/storage";
+import { useTheme } from "@/lib/theme";
+import type { Folder, Note, View } from "@/lib/types";
+
+const seedNotes = (): Note[] => {
+  const now = Date.now();
+  return [
+    {
+      id: uid(),
+      title: "Welcome to Quill",
+      content:
+        "A quiet place for your thoughts.\n\n• Press the + button to create a note\n• Organize with folders and #tags\n• Pin important notes to the top\n• Star favorites for quick access\n\nEverything stays in this browser — private, instant, offline.",
+      folderId: null,
+      tags: ["welcome"],
+      pinned: true,
+      favorite: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+};
+
+export function NotesApp() {
+  const { theme, toggle } = useTheme();
+  const [notes, setNotes] = useLocalStorage<Note[]>("quill.notes", seedNotes());
+  const [folders, setFolders] = useLocalStorage<Folder[]>("quill.folders", []);
+  const [view, setView] = useState<View>({ kind: "all" });
+  const [selectedId, setSelectedId] = useLocalStorage<string | null>(
+    "quill.selectedId",
+    null,
+  );
+  const [query, setQuery] = useState("");
+  const [mobilePanel, setMobilePanel] = useState<"sidebar" | "list" | "editor">(
+    "list",
+  );
+
+  // Tags derived from notes
+  const tags = useMemo(() => {
+    const set = new Set<string>();
+    notes.forEach((n) => n.tags.forEach((t) => set.add(t)));
+    return Array.from(set).sort();
+  }, [notes]);
+
+  // Filter & sort
+  const visibleNotes = useMemo(() => {
+    let arr = [...notes];
+    if (view.kind === "favorites") arr = arr.filter((n) => n.favorite);
+    else if (view.kind === "folder") arr = arr.filter((n) => n.folderId === view.id);
+    else if (view.kind === "tag") arr = arr.filter((n) => n.tags.includes(view.name));
+
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      arr = arr.filter(
+        (n) =>
+          n.title.toLowerCase().includes(q) ||
+          n.content.toLowerCase().includes(q) ||
+          n.tags.some((t) => t.toLowerCase().includes(q)),
+      );
+    }
+
+    arr.sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      return b.updatedAt - a.updatedAt;
+    });
+    return arr;
+  }, [notes, view, query]);
+
+  // Maintain selection
+  useEffect(() => {
+    if (selectedId && visibleNotes.some((n) => n.id === selectedId)) return;
+    setSelectedId(visibleNotes[0]?.id ?? null);
+  }, [visibleNotes, selectedId, setSelectedId]);
+
+  const selectedNote = notes.find((n) => n.id === selectedId) ?? null;
+
+  // Title for the list panel
+  const listTitle = (() => {
+    if (view.kind === "all") return "All Notes";
+    if (view.kind === "favorites") return "Favorites";
+    if (view.kind === "folder")
+      return folders.find((f) => f.id === view.id)?.name ?? "Folder";
+    if (view.kind === "tag") return `#${view.name}`;
+    return "Notes";
+  })();
+
+  // Operations
+  const createNote = () => {
+    const n: Note = {
+      id: uid(),
+      title: "",
+      content: "",
+      folderId: view.kind === "folder" ? view.id : null,
+      tags: view.kind === "tag" ? [view.name] : [],
+      pinned: false,
+      favorite: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    setNotes([n, ...notes]);
+    setSelectedId(n.id);
+    setMobilePanel("editor");
+  };
+
+  const updateNote = (id: string, patch: Partial<Note>) => {
+    setNotes(
+      notes.map((n) =>
+        n.id === id ? { ...n, ...patch, updatedAt: Date.now() } : n,
+      ),
+    );
+  };
+
+  const deleteNote = (id: string) => {
+    setNotes(notes.filter((n) => n.id !== id));
+  };
+
+  const addFolder = () => {
+    const name = window.prompt("Folder name");
+    if (!name?.trim()) return;
+    const emoji = window.prompt("Emoji (optional)") || undefined;
+    const f: Folder = {
+      id: uid(),
+      name: name.trim(),
+      emoji: emoji?.trim() || undefined,
+      createdAt: Date.now(),
+    };
+    setFolders([...folders, f]);
+    setView({ kind: "folder", id: f.id });
+  };
+
+  const deleteFolder = (id: string) => {
+    if (!window.confirm("Delete this folder? Notes will be unfiled.")) return;
+    setFolders(folders.filter((f) => f.id !== id));
+    setNotes(notes.map((n) => (n.folderId === id ? { ...n, folderId: null } : n)));
+    if (view.kind === "folder" && view.id === id) setView({ kind: "all" });
+  };
+
+  return (
+    <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
+      {/* Mobile top bar */}
+      <div className="absolute left-0 right-0 top-0 z-30 flex items-center justify-between border-b border-hairline bg-background/80 px-4 py-2 backdrop-blur md:hidden">
+        <button
+          onClick={() =>
+            setMobilePanel((p) => (p === "sidebar" ? "list" : "sidebar"))
+          }
+          aria-label="Toggle menu"
+          className="rounded-md p-1.5 text-muted-foreground hover:bg-accent"
+        >
+          {mobilePanel === "sidebar" ? (
+            <X className="h-4 w-4" />
+          ) : (
+            <Menu className="h-4 w-4" />
+          )}
+        </button>
+        <span className="font-display text-sm tracking-tight">
+          {selectedNote?.title || listTitle}
+        </span>
+        <button
+          onClick={createNote}
+          className="rounded-md bg-primary px-2.5 py-1 text-xs text-primary-foreground"
+        >
+          New
+        </button>
+      </div>
+
+      {/* Sidebar */}
+      <div
+        className={`${
+          mobilePanel === "sidebar" ? "flex" : "hidden"
+        } absolute inset-0 top-10 z-20 md:static md:top-0 md:flex`}
+      >
+        <Sidebar
+          folders={folders}
+          tags={tags}
+          view={view}
+          onView={(v) => {
+            setView(v);
+            setMobilePanel("list");
+          }}
+          onAddFolder={addFolder}
+          onDeleteFolder={deleteFolder}
+          theme={theme}
+          onToggleTheme={toggle}
+          noteCount={notes.length}
+          favoriteCount={notes.filter((n) => n.favorite).length}
+        />
+      </div>
+
+      {/* Note list */}
+      <div
+        className={`${
+          mobilePanel === "list" ? "flex" : "hidden"
+        } w-full pt-10 md:static md:flex md:w-auto md:pt-0`}
+      >
+        <NoteList
+          notes={visibleNotes}
+          selectedId={selectedId}
+          onSelect={(id) => {
+            setSelectedId(id);
+            setMobilePanel("editor");
+          }}
+          query={query}
+          onQuery={setQuery}
+          onCreate={createNote}
+          title={listTitle}
+        />
+      </div>
+
+      {/* Editor */}
+      <div
+        className={`${
+          mobilePanel === "editor" ? "flex" : "hidden"
+        } w-full flex-1 pt-10 md:static md:flex md:pt-0`}
+      >
+        <Editor
+          note={selectedNote}
+          folders={folders}
+          onChange={(patch) => selectedNote && updateNote(selectedNote.id, patch)}
+          onDelete={() => {
+            if (!selectedNote) return;
+            if (!window.confirm("Delete this note?")) return;
+            deleteNote(selectedNote.id);
+            setMobilePanel("list");
+          }}
+          onTogglePin={() =>
+            selectedNote &&
+            updateNote(selectedNote.id, { pinned: !selectedNote.pinned })
+          }
+          onToggleFavorite={() =>
+            selectedNote &&
+            updateNote(selectedNote.id, { favorite: !selectedNote.favorite })
+          }
+        />
+      </div>
+    </div>
+  );
+}
