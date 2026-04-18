@@ -14,7 +14,7 @@ const seedNotes = (): Note[] => {
       id: uid(),
       title: "Welcome to Quill",
       content:
-        "A quiet place for your thoughts.\n\n• Press the + button to create a note\n• Organize with folders and #tags\n• Pin important notes to the top\n• Star favorites for quick access\n\nEverything stays in this browser — private, instant, offline.",
+        "<p>A quiet place for your thoughts.</p><ul><li>Press the <strong>+</strong> button to create a note</li><li>Use the toolbar to format text, add lists or checklists</li><li>Pin important notes to the top</li><li>Star favorites for quick access</li></ul><p>Everything stays in this browser — private, instant, offline.</p>",
       folderId: null,
       tags: ["welcome"],
       pinned: true,
@@ -27,11 +27,12 @@ const seedNotes = (): Note[] => {
 
 export function NotesApp() {
   const { theme, toggle } = useTheme();
-  const [notes, setNotes] = useLocalStorage<Note[]>("quill.notes", seedNotes());
-  const [folders, setFolders] = useLocalStorage<Folder[]>("quill.folders", []);
+  // v2 keys — schema changed from plain text to rich HTML
+  const [notes, setNotes] = useLocalStorage<Note[]>("quill.notes.v2", seedNotes());
+  const [folders, setFolders] = useLocalStorage<Folder[]>("quill.folders.v2", []);
   const [view, setView] = useState<View>({ kind: "all" });
   const [selectedId, setSelectedId] = useLocalStorage<string | null>(
-    "quill.selectedId",
+    "quill.selectedId.v2",
     null,
   );
   const [query, setQuery] = useState("");

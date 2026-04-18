@@ -76,7 +76,7 @@ export function NoteList({
                 </div>
               </div>
               <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-                {stripFirstLine(n.content) || "No additional text"}
+                {stripHtml(n.content) || "No additional text"}
               </p>
               <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted-foreground">
                 <span>{formatDate(n.updatedAt)}</span>
@@ -97,9 +97,13 @@ export function NoteList({
   );
 }
 
-function stripFirstLine(content: string) {
-  const lines = content.split("\n").map((l) => l.trim()).filter(Boolean);
-  return lines.slice(1).join(" ").slice(0, 140);
+function stripHtml(html: string) {
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 160);
 }
 
 function formatDate(ts: number) {
