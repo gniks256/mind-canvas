@@ -1,4 +1,4 @@
-import { useEffect, forwardRef, useImperativeHandle } from "react";
+import { useCallback, useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import { useEditor, EditorContent, type Editor as TiptapEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TaskList from "@tiptap/extension-task-list";
@@ -16,8 +16,14 @@ import {
   List,
   ListOrdered,
   ListChecks,
+  Link2,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { Note } from "@/lib/types";
+import { NoteLink } from "@/components/notes/extensions/NoteLink";
+import { ToggleBlock, ToggleSummary, ToggleContent } from "@/components/notes/extensions/ToggleBlock";
+import { NoteSearchPopup } from "@/components/notes/NoteSearchPopup";
 
 /* ------- FontSize extension (TextStyle-based) ------- */
 const FontSize = Extension.create({
@@ -56,7 +62,7 @@ const FontSize = Extension.create({
   },
 });
 
-/* ------- Underline (lightweight, avoids extra package) ------- */
+/* ------- Underline (lightweight) ------- */
 const Underline = Extension.create({
   name: "underline",
   addGlobalAttributes() {
@@ -76,16 +82,12 @@ const Underline = Extension.create({
   },
 });
 
-/* ------- Component ------- */
-
 const FONT_FAMILIES: { label: string; value: string }[] = [
   { label: "Sans", value: "Inter, system-ui, sans-serif" },
   { label: "Serif", value: "Fraunces, Georgia, serif" },
   { label: "Mono", value: "JetBrains Mono, ui-monospace, monospace" },
 ];
-
 const FONT_SIZES = ["12px", "14px", "16px", "18px", "20px", "24px", "32px"];
-
 const COLORS = [
   "var(--foreground)",
   "#ef4444",
@@ -100,6 +102,9 @@ type Props = {
   value: string;
   onChange: (html: string) => void;
   showToolbar?: boolean;
+  notes: Note[];
+  currentNoteId: string;
+  onJumpNote: (id: string) => void;
 };
 
 export type RichEditorHandle = {
@@ -107,9 +112,24 @@ export type RichEditorHandle = {
 };
 
 export const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEditor(
-  { value, onChange, showToolbar = true },
+  { value, onChange, showToolbar = true, notes, currentNoteId, onJumpNote },
   ref,
 ) {
+  // Popup state for @-mention or toolbar link button
+  const [popup, setPopup] = useState<{
+    x: number;
+    y: number;
+    initialQuery: string;
+    /** range to replace when picking (used for @-trigger) */
+    replaceRange?: { from: number; to: number };
+  } | null>(null);
+
+  // Use refs for the latest notes/title so the editor click handler always sees fresh data.
+  const notesRef = useRef(notes);
+  notesRef.current = notes;
+  const onJumpRef = useRef(onJumpNote);
+  onJumpRef.current = onJumpNote;
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -122,7 +142,11 @@ export const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEdito
       Underline,
       TaskList,
       TaskItem.configure({ nested: true }),
-      Placeholder.configure({ placeholder: "Start writing…" }),
+      NoteLink,
+      ToggleBlock,
+      ToggleSummary,
+      ToggleContent,
+      Placeholder.configure({ placeholder: "Start writing… type @ to link a note" }),
     ],
     content: value || "",
     editorProps: {
@@ -130,11 +154,64 @@ export const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEdito
         class:
           "prose-note focus:outline-none min-h-[60vh] text-[15px] leading-7 [&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0 [&_ul[data-type=taskList]_li]:flex [&_ul[data-type=taskList]_li]:gap-2 [&_ul[data-type=taskList]_li]:items-start [&_ul[data-type=taskList]_input]:mt-1.5",
       },
+      handleClick(_view, _pos, event) {
+        const target = event.target as HTMLElement;
+        const link = target.closest("a[data-note-link]") as HTMLAnchorElement | null;
+        if (link) {
+          event.preventDefault();
+          const id = link.getAttribute("data-note-link");
+          if (id) onJumpRef.current(id);
+          return true;
+        }
+        return false;
+      },
+      handleKeyDown(view, event) {
+        // Open @-popup
+        if (event.key === "@") {
+          // Defer: open popup right after the @ is inserted
+          setTimeout(() => {
+            const { from } = view.state.selection;
+            const coords = view.coordsAtPos(from);
+            setPopup({
+              x: coords.left,
+              y: coords.bottom + 4,
+              initialQuery: "",
+              replaceRange: { from: from, to: from + 1 }, // will adjust below
+            });
+          }, 0);
+          return false;
+        }
+        return false;
+      },
     },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   });
 
   // Sync external value changes (note switch)
+  useEffect(() => {
+    if (!editor || !popup) return;
+    const handler = () => {
+      // Find the most recent @ before cursor; if absent, close popup.
+      const { from } = editor.state.selection;
+      const text = editor.state.doc.textBetween(Math.max(0, from - 60), from, "\n", "\0");
+      const m = text.match(/@([^\s@]*)$/);
+      if (!m) {
+        setPopup(null);
+        return;
+      }
+      const query = m[1];
+      const triggerFrom = from - m[0].length; // position of '@'
+      setPopup((p) => (p ? { ...p, initialQuery: query, replaceRange: { from: triggerFrom, to: from } } : p));
+    };
+    editor.on("selectionUpdate", handler);
+    editor.on("update", handler);
+    return () => {
+      editor.off("selectionUpdate", handler);
+      editor.off("update", handler);
+    };
+  }, [editor, popup]);
+
+  // Sync external value
   useEffect(() => {
     if (!editor) return;
     if (editor.getHTML() !== (value || "")) {
@@ -143,27 +220,76 @@ export const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEdito
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, editor]);
 
+  const insertNoteLink = useCallback(
+    (note: Note) => {
+      if (!editor) return;
+      const range = popup?.replaceRange;
+      const title = note.title || "Untitled";
+      const chain = editor.chain().focus();
+      if (range) {
+        chain.deleteRange(range);
+      }
+      chain
+        .insertContent([
+          {
+            type: "text",
+            text: title,
+            marks: [{ type: "noteLink", attrs: { noteId: note.id } }],
+          },
+          { type: "text", text: " " },
+        ])
+        .run();
+      setPopup(null);
+    },
+    [editor, popup],
+  );
+
+  const openLinkPickerFromButton = useCallback(() => {
+    if (!editor) return;
+    const { from } = editor.state.selection;
+    const coords = editor.view.coordsAtPos(from);
+    setPopup({ x: coords.left, y: coords.bottom + 4, initialQuery: "" });
+  }, [editor]);
+
   useImperativeHandle(
     ref,
     () => ({
-      toolbar: editor ? <Toolbar editor={editor} /> : null,
+      toolbar: editor ? (
+        <Toolbar editor={editor} onLinkNote={openLinkPickerFromButton} />
+      ) : null,
     }),
-    [editor],
+    [editor, openLinkPickerFromButton],
   );
 
   if (!editor) return null;
 
   return (
     <div className="flex flex-col">
-      {showToolbar && <Toolbar editor={editor} />}
+      {showToolbar && <Toolbar editor={editor} onLinkNote={openLinkPickerFromButton} />}
       <EditorContent editor={editor} className={showToolbar ? "mt-4" : ""} />
+      {popup && (
+        <NoteSearchPopup
+          notes={notesRef.current}
+          excludeId={currentNoteId}
+          anchor={{ x: popup.x, y: popup.y }}
+          initialQuery={popup.initialQuery}
+          onPick={insertNoteLink}
+          onClose={() => setPopup(null)}
+        />
+      )}
     </div>
   );
 });
 
 /* ------- Toolbar ------- */
 
-function Toolbar({ editor }: { editor: TiptapEditor }) {
+function Toolbar({
+  editor,
+  onLinkNote,
+}: {
+  editor: TiptapEditor;
+  onLinkNote: () => void;
+}) {
   const currentFont =
     (editor.getAttributes("textStyle").fontFamily as string | undefined) ?? "";
   const currentSize =
@@ -231,6 +357,23 @@ function Toolbar({ editor }: { editor: TiptapEditor }) {
         label="Checklist"
       >
         <ListChecks className="h-3.5 w-3.5" />
+      </ToolbarBtn>
+      <ToolbarBtn
+        active={editor.isActive("toggleBlock")}
+        onClick={() =>
+          (editor.chain().focus() as never as { insertToggle: () => { run: () => void } })
+            .insertToggle()
+            .run()
+        }
+        label="Toggle block"
+      >
+        <ChevronRight className="h-3.5 w-3.5" />
+      </ToolbarBtn>
+
+      <Divider />
+
+      <ToolbarBtn onClick={onLinkNote} label="Link to note">
+        <Link2 className="h-3.5 w-3.5" />
       </ToolbarBtn>
 
       <Divider />
