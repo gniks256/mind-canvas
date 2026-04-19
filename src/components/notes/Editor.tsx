@@ -148,6 +148,8 @@ export function Editor({
           <div className="mt-6">
             <RichEditor
               key={note.id}
+              ref={editorRef}
+              showToolbar={false}
               value={note.content}
               onChange={(html) => onChange({ content: html })}
             />
