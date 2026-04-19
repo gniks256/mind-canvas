@@ -80,6 +80,13 @@ export function Editor({
         </div>
         <div className="flex items-center gap-1">
           <IconButton
+            onClick={() => setShowFormat((v) => !v)}
+            active={showFormat}
+            label="Format"
+          >
+            <Type className="h-4 w-4" />
+          </IconButton>
+          <IconButton
             onClick={onTogglePin}
             active={note.pinned}
             label="Pin"
@@ -98,6 +105,13 @@ export function Editor({
           </IconButton>
         </div>
       </div>
+
+      {/* Formatting toolbar — collapsible, sits directly below the action bar */}
+      {showFormat && (
+        <div className="border-b border-hairline bg-background/95 backdrop-blur">
+          {editorRef.current?.toolbar}
+        </div>
+      )}
 
       {/* Body */}
       <div className="thin-scroll flex-1 overflow-y-auto">
