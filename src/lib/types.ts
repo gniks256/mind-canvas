@@ -3,6 +3,7 @@ export type Note = {
   title: string;
   content: string;
   folderId: string | null;
+  parentId: string | null;
   tags: string[];
   pinned: boolean;
   favorite: boolean;
