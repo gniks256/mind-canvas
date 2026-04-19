@@ -22,10 +22,21 @@ export function Editor({
   onToggleFavorite,
 }: Props) {
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<RichEditorHandle>(null);
+  const [showFormat, setShowFormat] = useState(false);
+  // Force re-render once the editor mounts so we can read its toolbar handle
+  const [, setEditorReady] = useState(0);
 
   useEffect(() => {
     autosize(titleRef.current);
   }, [note?.id, note?.title]);
+
+  useEffect(() => {
+    // Editor instance is created after first render; trigger one update
+    if (editorRef.current?.toolbar) return;
+    const t = setTimeout(() => setEditorReady((v) => v + 1), 0);
+    return () => clearTimeout(t);
+  }, [note?.id]);
 
   if (!note) {
     return (
