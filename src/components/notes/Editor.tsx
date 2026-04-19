@@ -1,8 +1,8 @@
-import { useEffect, useRef } from "react";
-import { Pin, Star, Trash2, Hash, Folder as FolderIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Pin, Star, Trash2, Hash, Folder as FolderIcon, Type } from "lucide-react";
 import type { Folder, Note } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { RichEditor } from "@/components/notes/RichEditor";
+import { RichEditor, type RichEditorHandle } from "@/components/notes/RichEditor";
 
 type Props = {
   note: Note | null;
