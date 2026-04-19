@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, forwardRef, useImperativeHandle } from "react";
 import { useEditor, EditorContent, type Editor as TiptapEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TaskList from "@tiptap/extension-task-list";
@@ -99,9 +99,17 @@ const COLORS = [
 type Props = {
   value: string;
   onChange: (html: string) => void;
+  showToolbar?: boolean;
 };
 
-export function RichEditor({ value, onChange }: Props) {
+export type RichEditorHandle = {
+  toolbar: React.ReactNode;
+};
+
+export const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEditor(
+  { value, onChange, showToolbar = true },
+  ref,
+) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -135,15 +143,23 @@ export function RichEditor({ value, onChange }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, editor]);
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      toolbar: editor ? <Toolbar editor={editor} /> : null,
+    }),
+    [editor],
+  );
+
   if (!editor) return null;
 
   return (
     <div className="flex flex-col">
-      <Toolbar editor={editor} />
-      <EditorContent editor={editor} className="mt-4" />
+      {showToolbar && <Toolbar editor={editor} />}
+      <EditorContent editor={editor} className={showToolbar ? "mt-4" : ""} />
     </div>
   );
-}
+});
 
 /* ------- Toolbar ------- */
 
@@ -156,7 +172,7 @@ function Toolbar({ editor }: { editor: TiptapEditor }) {
     (editor.getAttributes("textStyle").color as string | undefined) ?? "";
 
   return (
-    <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-1 border-b border-hairline bg-background/95 px-1 py-2 backdrop-blur">
+    <div className="flex flex-wrap items-center gap-1 px-6 py-2 sm:px-10">
       <ToolbarBtn
         active={editor.isActive("bold")}
         onClick={() => editor.chain().focus().toggleBold().run()}

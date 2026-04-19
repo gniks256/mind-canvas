@@ -1,8 +1,8 @@
-import { useEffect, useRef } from "react";
-import { Pin, Star, Trash2, Hash, Folder as FolderIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Pin, Star, Trash2, Hash, Folder as FolderIcon, Type } from "lucide-react";
 import type { Folder, Note } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { RichEditor } from "@/components/notes/RichEditor";
+import { RichEditor, type RichEditorHandle } from "@/components/notes/RichEditor";
 
 type Props = {
   note: Note | null;
@@ -22,10 +22,21 @@ export function Editor({
   onToggleFavorite,
 }: Props) {
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<RichEditorHandle>(null);
+  const [showFormat, setShowFormat] = useState(false);
+  // Force re-render once the editor mounts so we can read its toolbar handle
+  const [, setEditorReady] = useState(0);
 
   useEffect(() => {
     autosize(titleRef.current);
   }, [note?.id, note?.title]);
+
+  useEffect(() => {
+    // Editor instance is created after first render; trigger one update
+    if (editorRef.current?.toolbar) return;
+    const t = setTimeout(() => setEditorReady((v) => v + 1), 0);
+    return () => clearTimeout(t);
+  }, [note?.id]);
 
   if (!note) {
     return (
@@ -69,6 +80,13 @@ export function Editor({
         </div>
         <div className="flex items-center gap-1">
           <IconButton
+            onClick={() => setShowFormat((v) => !v)}
+            active={showFormat}
+            label="Format"
+          >
+            <Type className="h-4 w-4" />
+          </IconButton>
+          <IconButton
             onClick={onTogglePin}
             active={note.pinned}
             label="Pin"
@@ -87,6 +105,13 @@ export function Editor({
           </IconButton>
         </div>
       </div>
+
+      {/* Formatting toolbar — collapsible, sits directly below the action bar */}
+      {showFormat && (
+        <div className="border-b border-hairline bg-background/95 backdrop-blur">
+          {editorRef.current?.toolbar}
+        </div>
+      )}
 
       {/* Body */}
       <div className="thin-scroll flex-1 overflow-y-auto">
@@ -123,6 +148,8 @@ export function Editor({
           <div className="mt-6">
             <RichEditor
               key={note.id}
+              ref={editorRef}
+              showToolbar={false}
               value={note.content}
               onChange={(html) => onChange({ content: html })}
             />
