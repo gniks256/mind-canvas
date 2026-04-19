@@ -1,25 +1,29 @@
-import { useEffect, useRef, useState } from "react";
-import { Pin, Star, Trash2, Hash, Folder as FolderIcon, Type } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Pin, Star, Trash2, Hash, Folder as FolderIcon, Type, FileText, ArrowRight } from "lucide-react";
 import type { Folder, Note } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { RichEditor, type RichEditorHandle } from "@/components/notes/RichEditor";
 
 type Props = {
   note: Note | null;
+  notes: Note[];
   folders: Folder[];
   onChange: (patch: Partial<Note>) => void;
   onDelete: () => void;
   onTogglePin: () => void;
   onToggleFavorite: () => void;
+  onJumpNote: (id: string) => void;
 };
 
 export function Editor({
   note,
+  notes,
   folders,
   onChange,
   onDelete,
   onTogglePin,
   onToggleFavorite,
+  onJumpNote,
 }: Props) {
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const editorRef = useRef<RichEditorHandle>(null);
@@ -32,11 +36,25 @@ export function Editor({
   }, [note?.id, note?.title]);
 
   useEffect(() => {
-    // Editor instance is created after first render; trigger one update
     if (editorRef.current?.toolbar) return;
     const t = setTimeout(() => setEditorReady((v) => v + 1), 0);
     return () => clearTimeout(t);
   }, [note?.id]);
+
+  // Backlinks: notes whose HTML references this note via data-note-link
+  const backlinks = useMemo(() => {
+    if (!note) return [];
+    const needle = `data-note-link="${note.id}"`;
+    return notes.filter((n) => n.id !== note.id && n.content.includes(needle));
+  }, [notes, note]);
+
+  // Sub-notes (children)
+  const subNotes = useMemo(() => {
+    if (!note) return [];
+    return notes
+      .filter((n) => n.parentId === note.id)
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  }, [notes, note]);
 
   if (!note) {
     return (
@@ -52,6 +70,7 @@ export function Editor({
   }
 
   const folder = folders.find((f) => f.id === note.folderId) ?? null;
+  const parent = note.parentId ? notes.find((n) => n.id === note.parentId) ?? null : null;
   const tagsText = note.tags.join(", ");
 
   return (
@@ -86,18 +105,10 @@ export function Editor({
           >
             <Type className="h-4 w-4" />
           </IconButton>
-          <IconButton
-            onClick={onTogglePin}
-            active={note.pinned}
-            label="Pin"
-          >
+          <IconButton onClick={onTogglePin} active={note.pinned} label="Pin">
             <Pin className={cn("h-4 w-4", note.pinned && "fill-current")} />
           </IconButton>
-          <IconButton
-            onClick={onToggleFavorite}
-            active={note.favorite}
-            label="Favorite"
-          >
+          <IconButton onClick={onToggleFavorite} active={note.favorite} label="Favorite">
             <Star className={cn("h-4 w-4", note.favorite && "fill-current")} />
           </IconButton>
           <IconButton onClick={onDelete} label="Delete" danger>
@@ -106,7 +117,7 @@ export function Editor({
         </div>
       </div>
 
-      {/* Formatting toolbar — collapsible, sits directly below the action bar */}
+      {/* Formatting toolbar — collapsible */}
       {showFormat && (
         <div className="border-b border-hairline bg-background/95 backdrop-blur">
           {editorRef.current?.toolbar}
@@ -116,6 +127,18 @@ export function Editor({
       {/* Body */}
       <div className="thin-scroll flex-1 overflow-y-auto">
         <div className="mx-auto max-w-2xl px-6 py-10 sm:px-10">
+          {/* Breadcrumb to parent */}
+          {parent && (
+            <button
+              onClick={() => onJumpNote(parent.id)}
+              className="mb-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <FileText className="h-3 w-3" />
+              <span className="truncate">{parent.title || "Untitled"}</span>
+              <span className="opacity-50">/</span>
+            </button>
+          )}
+
           <textarea
             ref={titleRef}
             value={note.title}
@@ -152,8 +175,55 @@ export function Editor({
               showToolbar={false}
               value={note.content}
               onChange={(html) => onChange({ content: html })}
+              notes={notes}
+              currentNoteId={note.id}
+              onJumpNote={onJumpNote}
             />
           </div>
+
+          {/* Sub-notes */}
+          {subNotes.length > 0 && (
+            <div className="mt-12">
+              <h4 className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Sub-notes
+              </h4>
+              <div className="flex flex-col gap-1">
+                {subNotes.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => onJumpNote(s.id)}
+                    className="group flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent"
+                  >
+                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="flex-1 truncate">{s.title || "Untitled"}</span>
+                    <ArrowRight className="h-3 w-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Backlinks */}
+          {backlinks.length > 0 && (
+            <div className="mt-10 border-t border-hairline pt-6">
+              <h4 className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Linked from
+              </h4>
+              <div className="flex flex-col gap-1">
+                {backlinks.map((b) => (
+                  <button
+                    key={b.id}
+                    onClick={() => onJumpNote(b.id)}
+                    className="group flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent"
+                  >
+                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="flex-1 truncate">{b.title || "Untitled"}</span>
+                    <ArrowRight className="h-3 w-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

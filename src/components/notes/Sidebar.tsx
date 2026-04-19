@@ -1,12 +1,29 @@
-import { Link, Pin, Star, Hash, Folder as FolderIcon, Inbox, Plus, Sun, Moon, Trash2 } from "lucide-react";
-import type { Folder, View } from "@/lib/types";
+import { useMemo, useState } from "react";
+import {
+  Link as LinkIcon,
+  Star,
+  Hash,
+  Folder as FolderIcon,
+  Inbox,
+  Plus,
+  Sun,
+  Moon,
+  Trash2,
+  ChevronRight,
+  FileText,
+} from "lucide-react";
+import type { Folder, Note, View } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type Props = {
+  notes: Note[];
+  selectedId: string | null;
   folders: Folder[];
   tags: string[];
   view: View;
   onView: (v: View) => void;
+  onSelectNote: (id: string) => void;
+  onAddSubNote: (parentId: string) => void;
   onAddFolder: () => void;
   onDeleteFolder: (id: string) => void;
   theme: "light" | "dark";
@@ -16,10 +33,14 @@ type Props = {
 };
 
 export function Sidebar({
+  notes,
+  selectedId,
   folders,
   tags,
   view,
   onView,
+  onSelectNote,
+  onAddSubNote,
   onAddFolder,
   onDeleteFolder,
   theme,
@@ -27,12 +48,32 @@ export function Sidebar({
   noteCount,
   favoriteCount,
 }: Props) {
+  // Build children index
+  const childrenOf = useMemo(() => {
+    const m = new Map<string | null, Note[]>();
+    for (const n of notes) {
+      const k = n.parentId;
+      if (!m.has(k)) m.set(k, []);
+      m.get(k)!.push(n);
+    }
+    for (const arr of m.values()) {
+      arr.sort((a, b) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+        return b.updatedAt - a.updatedAt;
+      });
+    }
+    return m;
+  }, [notes]);
+
+  const roots = childrenOf.get(null) ?? [];
+  const hasNested = roots.some((r) => (childrenOf.get(r.id)?.length ?? 0) > 0);
+
   return (
     <aside className="flex h-full w-64 flex-col border-r border-hairline bg-sidebar text-sidebar-foreground">
       <div className="flex items-center justify-between px-5 pt-5 pb-3">
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Link className="h-3.5 w-3.5" strokeWidth={2.4} />
+            <LinkIcon className="h-3.5 w-3.5" strokeWidth={2.4} />
           </div>
           <span className="font-display text-lg tracking-tight">Quill</span>
         </div>
@@ -62,6 +103,25 @@ export function Sidebar({
             onClick={() => onView({ kind: "favorites" })}
           />
         </Section>
+
+        {hasNested && (
+          <>
+            <SectionHeader title="Hierarchy" />
+            <Section>
+              {roots.map((n) => (
+                <NoteTreeItem
+                  key={n.id}
+                  note={n}
+                  depth={0}
+                  childrenOf={childrenOf}
+                  selectedId={selectedId}
+                  onSelectNote={onSelectNote}
+                  onAddSubNote={onAddSubNote}
+                />
+              ))}
+            </Section>
+          </>
+        )}
 
         <SectionHeader title="Folders" action={onAddFolder} />
         <Section>
@@ -108,6 +168,83 @@ export function Sidebar({
         Local · Synced to this browser
       </div>
     </aside>
+  );
+}
+
+function NoteTreeItem({
+  note,
+  depth,
+  childrenOf,
+  selectedId,
+  onSelectNote,
+  onAddSubNote,
+}: {
+  note: Note;
+  depth: number;
+  childrenOf: Map<string | null, Note[]>;
+  selectedId: string | null;
+  onSelectNote: (id: string) => void;
+  onAddSubNote: (parentId: string) => void;
+}) {
+  const kids = childrenOf.get(note.id) ?? [];
+  const hasKids = kids.length > 0;
+  const [open, setOpen] = useState(true);
+  const active = selectedId === note.id;
+
+  return (
+    <div>
+      <div
+        className={cn(
+          "group flex items-center gap-1 rounded-md py-1.5 pr-2 text-sm transition-colors cursor-pointer",
+          active
+            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+            : "text-sidebar-foreground hover:bg-sidebar-accent/60",
+        )}
+        style={{ paddingLeft: 8 + depth * 12 }}
+        onClick={() => onSelectNote(note.id)}
+      >
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (hasKids) setOpen((v) => !v);
+          }}
+          className={cn(
+            "flex h-4 w-4 items-center justify-center text-muted-foreground transition-transform",
+            open && "rotate-90",
+            !hasKids && "opacity-0 pointer-events-none",
+          )}
+          aria-label={open ? "Collapse" : "Expand"}
+        >
+          <ChevronRight className="h-3 w-3" />
+        </button>
+        <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="flex-1 truncate">{note.title || "Untitled"}</span>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddSubNote(note.id);
+          }}
+          className="opacity-0 transition-opacity group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+          aria-label="Add sub-note"
+          title="Add sub-note"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      {open &&
+        hasKids &&
+        kids.map((k) => (
+          <NoteTreeItem
+            key={k.id}
+            note={k}
+            depth={depth + 1}
+            childrenOf={childrenOf}
+            selectedId={selectedId}
+            onSelectNote={onSelectNote}
+            onAddSubNote={onAddSubNote}
+          />
+        ))}
+    </div>
   );
 }
 
@@ -181,5 +318,3 @@ function Item({
     </div>
   );
 }
-
-export { Pin };

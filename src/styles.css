@@ -209,6 +209,58 @@
     border-radius: 4px;
   }
 
+  /* Inline note link chip */
+  .prose-note .note-link {
+    display: inline;
+    color: var(--color-foreground);
+    background: oklch(from var(--color-foreground) l c h / 0.06);
+    border-bottom: 1px solid oklch(from var(--color-foreground) l c h / 0.25);
+    padding: 0 0.2em;
+    border-radius: 3px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 120ms ease;
+  }
+  .prose-note .note-link:hover {
+    background: oklch(from var(--color-foreground) l c h / 0.12);
+  }
+  .prose-note .note-link::before {
+    content: "@";
+    opacity: 0.5;
+    margin-right: 0.05em;
+  }
+
+  /* Toggle block (Notion-style) */
+  .prose-note .note-toggle {
+    margin: 0.5rem 0;
+    border-left: 2px solid var(--color-hairline);
+    padding-left: 0.6rem;
+  }
+  .prose-note .note-toggle > .note-toggle-summary {
+    cursor: pointer;
+    list-style: none;
+    font-weight: 500;
+    padding: 0.15rem 0;
+    outline: none;
+  }
+  .prose-note .note-toggle > .note-toggle-summary::-webkit-details-marker {
+    display: none;
+  }
+  .prose-note .note-toggle > .note-toggle-summary::before {
+    content: "▸";
+    display: inline-block;
+    width: 1rem;
+    color: var(--color-muted-foreground);
+    transition: transform 120ms ease;
+  }
+  .prose-note .note-toggle[open] > .note-toggle-summary::before {
+    transform: rotate(90deg);
+  }
+  .prose-note .note-toggle-content {
+    padding-left: 1rem;
+    margin-top: 0.2rem;
+  }
+
   /* Scrollbars — invisible until hover, Apple-style */
   .thin-scroll {
     scrollbar-width: thin;
