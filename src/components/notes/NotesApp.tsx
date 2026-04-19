@@ -168,7 +168,7 @@ export function NotesApp() {
           {selectedNote?.title || listTitle}
         </span>
         <button
-          onClick={createNote}
+          onClick={() => createNote()}
           className="rounded-md bg-primary px-2.5 py-1 text-xs text-primary-foreground"
         >
           New
@@ -182,6 +182,8 @@ export function NotesApp() {
         } absolute inset-0 top-10 z-20 md:static md:top-0 md:flex`}
       >
         <Sidebar
+          notes={notes}
+          selectedId={selectedId}
           folders={folders}
           tags={tags}
           view={view}
@@ -189,6 +191,12 @@ export function NotesApp() {
             setView(v);
             setMobilePanel("list");
           }}
+          onSelectNote={(id) => {
+            setSelectedId(id);
+            setView({ kind: "all" });
+            setMobilePanel("editor");
+          }}
+          onAddSubNote={(parentId) => createNote(parentId)}
           onAddFolder={addFolder}
           onDeleteFolder={deleteFolder}
           theme={theme}
@@ -213,7 +221,7 @@ export function NotesApp() {
           }}
           query={query}
           onQuery={setQuery}
-          onCreate={createNote}
+          onCreate={() => createNote()}
           title={listTitle}
         />
       </div>
@@ -227,6 +235,12 @@ export function NotesApp() {
         <Editor
           note={selectedNote}
           folders={folders}
+          notes={notes}
+          onJumpNote={(id) => {
+            setSelectedId(id);
+            setView({ kind: "all" });
+            setMobilePanel("editor");
+          }}
           onChange={(patch) => selectedNote && updateNote(selectedNote.id, patch)}
           onDelete={() => {
             if (!selectedNote) return;
