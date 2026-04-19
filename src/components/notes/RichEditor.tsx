@@ -172,7 +172,7 @@ function Toolbar({ editor }: { editor: TiptapEditor }) {
     (editor.getAttributes("textStyle").color as string | undefined) ?? "";
 
   return (
-    <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-1 border-b border-hairline bg-background/95 px-1 py-2 backdrop-blur">
+    <div className="flex flex-wrap items-center gap-1 px-6 py-2 sm:px-10">
       <ToolbarBtn
         active={editor.isActive("bold")}
         onClick={() => editor.chain().focus().toggleBold().run()}
