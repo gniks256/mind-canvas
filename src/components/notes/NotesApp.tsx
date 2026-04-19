@@ -14,8 +14,9 @@ const seedNotes = (): Note[] => {
       id: uid(),
       title: "Welcome to Quill",
       content:
-        "<p>A quiet place for your thoughts.</p><ul><li>Press the <strong>+</strong> button to create a note</li><li>Use the toolbar to format text, add lists or checklists</li><li>Pin important notes to the top</li><li>Star favorites for quick access</li></ul><p>Everything stays in this browser — private, instant, offline.</p>",
+        "<p>A quiet place for your thoughts.</p><ul><li>Press the <strong>+</strong> button to create a note</li><li>Use the toolbar to format text, add lists or checklists</li><li>Pin important notes to the top</li><li>Star favorites for quick access</li></ul><p>Type <strong>@</strong> to link another note. Add sub-notes from the sidebar.</p>",
       folderId: null,
+      parentId: null,
       tags: ["welcome"],
       pinned: true,
       favorite: true,
@@ -28,7 +29,7 @@ const seedNotes = (): Note[] => {
 export function NotesApp() {
   const { theme, toggle } = useTheme();
   // v2 keys — schema changed from plain text to rich HTML
-  const [notes, setNotes] = useLocalStorage<Note[]>("quill.notes.v2", seedNotes());
+  const [notes, setNotes] = useLocalStorage<Note[]>("quill.notes.v3", seedNotes());
   const [folders, setFolders] = useLocalStorage<Folder[]>("quill.folders.v2", []);
   const [view, setView] = useState<View>({ kind: "all" });
   const [selectedId, setSelectedId] = useLocalStorage<string | null>(
@@ -90,12 +91,18 @@ export function NotesApp() {
   })();
 
   // Operations
-  const createNote = () => {
+  const createNote = (parentId: string | null = null) => {
+    const parent = parentId ? notes.find((n) => n.id === parentId) ?? null : null;
     const n: Note = {
       id: uid(),
       title: "",
       content: "",
-      folderId: view.kind === "folder" ? view.id : null,
+      folderId: parent
+        ? parent.folderId
+        : view.kind === "folder"
+          ? view.id
+          : null,
+      parentId,
       tags: view.kind === "tag" ? [view.name] : [],
       pinned: false,
       favorite: false,
