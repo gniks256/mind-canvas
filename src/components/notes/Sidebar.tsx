@@ -69,20 +69,19 @@ export function Sidebar({
   const hasNested = roots.some((r) => (childrenOf.get(r.id)?.length ?? 0) > 0);
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-hairline bg-sidebar text-sidebar-foreground">
-      <div className="flex items-center justify-between px-5 pt-5 pb-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <LinkIcon className="h-3.5 w-3.5" strokeWidth={2.4} />
-          </div>
-          <span className="font-display text-lg tracking-tight">Quill</span>
+    <aside className="flex h-full w-60 flex-col border-r border-hairline bg-sidebar text-sidebar-foreground">
+      <div className="flex items-center justify-between px-3 pt-3 pb-2">
+        <div className="flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-sidebar-accent cursor-default">
+          <span className="text-base leading-none">📝</span>
+          <span className="text-sm font-semibold tracking-tight">Quill</span>
+          <span className="ml-1 text-[10px] text-muted-foreground">workspace</span>
         </div>
         <button
           onClick={onToggleTheme}
-          className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
           aria-label="Toggle theme"
         >
-          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
         </button>
       </div>
 
