@@ -148,7 +148,7 @@ export function Editor({
             }}
             placeholder="Untitled"
             rows={1}
-            className="w-full resize-none bg-transparent font-display text-4xl font-medium tracking-tight placeholder:text-muted-foreground/50 focus:outline-none"
+            className="w-full resize-none bg-transparent text-[40px] font-bold leading-tight tracking-tight placeholder:text-muted-foreground/40 focus:outline-none"
           />
 
           <div className="mt-3 flex items-center gap-2 text-xs">
