@@ -164,7 +164,7 @@ export function NotesApp() {
             <Menu className="h-4 w-4" />
           )}
         </button>
-        <span className="font-display text-sm tracking-tight">
+        <span className="text-sm font-semibold tracking-tight">
           {selectedNote?.title || listTitle}
         </span>
         <button
