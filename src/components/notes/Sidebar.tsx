@@ -253,14 +253,14 @@ function Section({ children }: { children: React.ReactNode }) {
 
 function SectionHeader({ title, action }: { title: string; action?: () => void }) {
   return (
-    <div className="mt-4 mb-1 flex items-center justify-between px-3">
-      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+    <div className="mt-3 mb-0.5 flex items-center justify-between px-3 group/header">
+      <span className="text-[11px] font-medium text-muted-foreground">
         {title}
       </span>
       {action && (
         <button
           onClick={action}
-          className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+          className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity group-hover/header:opacity-100 hover:bg-sidebar-accent hover:text-foreground"
           aria-label={`Add ${title}`}
         >
           <Plus className="h-3.5 w-3.5" />
