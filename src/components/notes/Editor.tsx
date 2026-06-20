@@ -148,7 +148,7 @@ export function Editor({
             }}
             placeholder="Untitled"
             rows={1}
-            className="w-full resize-none bg-transparent font-display text-4xl font-medium tracking-tight placeholder:text-muted-foreground/50 focus:outline-none"
+            className="w-full resize-none bg-transparent text-[40px] font-bold leading-tight tracking-tight placeholder:text-muted-foreground/40 focus:outline-none"
           />
 
           <div className="mt-3 flex items-center gap-2 text-xs">
@@ -184,7 +184,7 @@ export function Editor({
           {/* Sub-notes */}
           {subNotes.length > 0 && (
             <div className="mt-12">
-              <h4 className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <h4 className="mb-2 text-xs font-semibold text-muted-foreground">
                 Sub-notes
               </h4>
               <div className="flex flex-col gap-1">
@@ -206,7 +206,7 @@ export function Editor({
           {/* Backlinks */}
           {backlinks.length > 0 && (
             <div className="mt-10 border-t border-hairline pt-6">
-              <h4 className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <h4 className="mb-2 text-xs font-semibold text-muted-foreground">
                 Linked from
               </h4>
               <div className="flex flex-col gap-1">

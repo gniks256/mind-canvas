@@ -69,20 +69,19 @@ export function Sidebar({
   const hasNested = roots.some((r) => (childrenOf.get(r.id)?.length ?? 0) > 0);
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-hairline bg-sidebar text-sidebar-foreground">
-      <div className="flex items-center justify-between px-5 pt-5 pb-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <LinkIcon className="h-3.5 w-3.5" strokeWidth={2.4} />
-          </div>
-          <span className="font-display text-lg tracking-tight">Quill</span>
+    <aside className="flex h-full w-60 flex-col border-r border-hairline bg-sidebar text-sidebar-foreground">
+      <div className="flex items-center justify-between px-3 pt-3 pb-2">
+        <div className="flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-sidebar-accent cursor-default">
+          <span className="text-base leading-none">📝</span>
+          <span className="text-sm font-semibold tracking-tight">Quill</span>
+          <span className="ml-1 text-[10px] text-muted-foreground">workspace</span>
         </div>
         <button
           onClick={onToggleTheme}
-          className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
           aria-label="Toggle theme"
         >
-          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
         </button>
       </div>
 
@@ -164,8 +163,8 @@ export function Sidebar({
         )}
       </nav>
 
-      <div className="border-t border-hairline px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">
-        Local · Synced to this browser
+      <div className="border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
+        Local · this browser
       </div>
     </aside>
   );
@@ -254,14 +253,14 @@ function Section({ children }: { children: React.ReactNode }) {
 
 function SectionHeader({ title, action }: { title: string; action?: () => void }) {
   return (
-    <div className="mt-4 mb-1 flex items-center justify-between px-3">
-      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+    <div className="mt-3 mb-0.5 flex items-center justify-between px-3 group/header">
+      <span className="text-[11px] font-medium text-muted-foreground">
         {title}
       </span>
       {action && (
         <button
           onClick={action}
-          className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+          className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity group-hover/header:opacity-100 hover:bg-sidebar-accent hover:text-foreground"
           aria-label={`Add ${title}`}
         >
           <Plus className="h-3.5 w-3.5" />

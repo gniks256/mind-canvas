@@ -25,7 +25,7 @@ export function NoteList({
     <div className="flex h-full w-80 flex-col border-r border-hairline bg-surface">
       <div className="px-5 pt-5 pb-3">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-2xl tracking-tight">{title}</h2>
+          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
           <button
             onClick={onCreate}
             className="rounded-md bg-primary p-1.5 text-primary-foreground shadow-soft transition-transform hover:scale-105"
