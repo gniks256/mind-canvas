@@ -163,8 +163,8 @@ export function Sidebar({
         )}
       </nav>
 
-      <div className="border-t border-hairline px-5 py-3 text-[11px] uppercase tracking-wider text-muted-foreground">
-        Local · Synced to this browser
+      <div className="border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
+        Local · this browser
       </div>
     </aside>
   );
