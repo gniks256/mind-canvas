@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Sidebar } from "@/components/notes/Sidebar";
-import { NoteList } from "@/components/notes/NoteList";
 import { Editor } from "@/components/notes/Editor";
 import { useLocalStorage, uid } from "@/lib/storage";
 import { useTheme } from "@/lib/theme";
@@ -28,7 +27,6 @@ const seedNotes = (): Note[] => {
 
 export function NotesApp() {
   const { theme, toggle } = useTheme();
-  // v2 keys — schema changed from plain text to rich HTML
   const [notes, setNotes] = useLocalStorage<Note[]>("quill.notes.v3", seedNotes());
   const [folders, setFolders] = useLocalStorage<Folder[]>("quill.folders.v2", []);
   const [view, setView] = useState<View>({ kind: "all" });
@@ -37,8 +35,8 @@ export function NotesApp() {
     null,
   );
   const [query, setQuery] = useState("");
-  const [mobilePanel, setMobilePanel] = useState<"sidebar" | "list" | "editor">(
-    "list",
+  const [mobilePanel, setMobilePanel] = useState<"sidebar" | "editor">(
+    "sidebar",
   );
 
   // Tags derived from notes
@@ -80,16 +78,6 @@ export function NotesApp() {
 
   const selectedNote = notes.find((n) => n.id === selectedId) ?? null;
 
-  // Title for the list panel
-  const listTitle = (() => {
-    if (view.kind === "all") return "All Notes";
-    if (view.kind === "favorites") return "Favorites";
-    if (view.kind === "folder")
-      return folders.find((f) => f.id === view.id)?.name ?? "Folder";
-    if (view.kind === "tag") return `#${view.name}`;
-    return "Notes";
-  })();
-
   // Operations
   const createNote = (parentId: string | null = null) => {
     const parent = parentId ? notes.find((n) => n.id === parentId) ?? null : null;
@@ -105,7 +93,7 @@ export function NotesApp() {
       parentId,
       tags: view.kind === "tag" ? [view.name] : [],
       pinned: false,
-      favorite: false,
+      favorite: view.kind === "favorites",
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -153,7 +141,7 @@ export function NotesApp() {
       <div className="absolute left-0 right-0 top-0 z-30 flex items-center justify-between border-b border-hairline bg-background/80 px-4 py-2 backdrop-blur md:hidden">
         <button
           onClick={() =>
-            setMobilePanel((p) => (p === "sidebar" ? "list" : "sidebar"))
+            setMobilePanel((p) => (p === "sidebar" ? "editor" : "sidebar"))
           }
           aria-label="Toggle menu"
           className="rounded-md p-1.5 text-muted-foreground hover:bg-accent"
@@ -165,7 +153,7 @@ export function NotesApp() {
           )}
         </button>
         <span className="text-sm font-semibold tracking-tight">
-          {selectedNote?.title || listTitle}
+          {selectedNote?.title || "Quill"}
         </span>
         <button
           onClick={() => createNote()}
@@ -182,18 +170,19 @@ export function NotesApp() {
         } absolute inset-0 top-10 z-20 md:static md:top-0 md:flex`}
       >
         <Sidebar
-          notes={notes}
+          filteredNotes={visibleNotes}
           selectedId={selectedId}
           folders={folders}
           tags={tags}
           view={view}
+          query={query}
+          onQuery={setQuery}
           onView={(v) => {
             setView(v);
-            setMobilePanel("list");
+            setMobilePanel("sidebar");
           }}
           onSelectNote={(id) => {
             setSelectedId(id);
-            setView({ kind: "all" });
             setMobilePanel("editor");
           }}
           onAddSubNote={(parentId) => createNote(parentId)}
@@ -203,26 +192,6 @@ export function NotesApp() {
           onToggleTheme={toggle}
           noteCount={notes.length}
           favoriteCount={notes.filter((n) => n.favorite).length}
-        />
-      </div>
-
-      {/* Note list */}
-      <div
-        className={`${
-          mobilePanel === "list" ? "flex" : "hidden"
-        } w-full pt-10 md:static md:flex md:w-auto md:pt-0`}
-      >
-        <NoteList
-          notes={visibleNotes}
-          selectedId={selectedId}
-          onSelect={(id) => {
-            setSelectedId(id);
-            setMobilePanel("editor");
-          }}
-          query={query}
-          onQuery={setQuery}
-          onCreate={() => createNote()}
-          title={listTitle}
         />
       </div>
 
@@ -246,7 +215,6 @@ export function NotesApp() {
             if (!selectedNote) return;
             if (!window.confirm("Delete this note?")) return;
             deleteNote(selectedNote.id);
-            setMobilePanel("list");
           }}
           onTogglePin={() =>
             selectedNote &&

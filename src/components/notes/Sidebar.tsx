@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import {
-  Link as LinkIcon,
   Star,
   Hash,
   Folder as FolderIcon,
@@ -11,16 +10,19 @@ import {
   Trash2,
   ChevronRight,
   FileText,
+  Search,
 } from "lucide-react";
 import type { Folder, Note, View } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type Props = {
-  notes: Note[];
+  filteredNotes: Note[];
   selectedId: string | null;
   folders: Folder[];
   tags: string[];
   view: View;
+  query: string;
+  onQuery: (q: string) => void;
   onView: (v: View) => void;
   onSelectNote: (id: string) => void;
   onAddSubNote: (parentId: string) => void;
@@ -33,11 +35,13 @@ type Props = {
 };
 
 export function Sidebar({
-  notes,
+  filteredNotes,
   selectedId,
   folders,
   tags,
   view,
+  query,
+  onQuery,
   onView,
   onSelectNote,
   onAddSubNote,
@@ -48,10 +52,10 @@ export function Sidebar({
   noteCount,
   favoriteCount,
 }: Props) {
-  // Build children index
+  // Build children index from filtered notes
   const childrenOf = useMemo(() => {
     const m = new Map<string | null, Note[]>();
-    for (const n of notes) {
+    for (const n of filteredNotes) {
       const k = n.parentId;
       if (!m.has(k)) m.set(k, []);
       m.get(k)!.push(n);
@@ -63,10 +67,9 @@ export function Sidebar({
       });
     }
     return m;
-  }, [notes]);
+  }, [filteredNotes]);
 
   const roots = childrenOf.get(null) ?? [];
-  const hasNested = roots.some((r) => (childrenOf.get(r.id)?.length ?? 0) > 0);
 
   return (
     <aside className="flex h-full w-60 flex-col border-r border-hairline bg-sidebar text-sidebar-foreground">
@@ -86,6 +89,19 @@ export function Sidebar({
       </div>
 
       <nav className="thin-scroll flex-1 overflow-y-auto px-3 pb-4">
+        <div className="mb-2">
+          <div className="flex items-center gap-2 rounded-md bg-sidebar-accent/40 px-2 py-1.5">
+            <Search className="h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => onQuery(e.target.value)}
+              placeholder="Search notes..."
+              className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground text-sidebar-foreground"
+            />
+          </div>
+        </div>
+
         <Section>
           <Item
             icon={<Inbox className="h-4 w-4" />}
@@ -103,24 +119,23 @@ export function Sidebar({
           />
         </Section>
 
-        {hasNested && (
-          <>
-            <SectionHeader title="Hierarchy" />
-            <Section>
-              {roots.map((n) => (
-                <NoteTreeItem
-                  key={n.id}
-                  note={n}
-                  depth={0}
-                  childrenOf={childrenOf}
-                  selectedId={selectedId}
-                  onSelectNote={onSelectNote}
-                  onAddSubNote={onAddSubNote}
-                />
-              ))}
-            </Section>
-          </>
-        )}
+        <SectionHeader title="Notes" />
+        <Section>
+          {roots.length === 0 && (
+            <p className="px-3 py-1.5 text-xs text-muted-foreground">No notes</p>
+          )}
+          {roots.map((n) => (
+            <NoteTreeItem
+              key={n.id}
+              note={n}
+              depth={0}
+              childrenOf={childrenOf}
+              selectedId={selectedId}
+              onSelectNote={onSelectNote}
+              onAddSubNote={onAddSubNote}
+            />
+          ))}
+        </Section>
 
         <SectionHeader title="Folders" action={onAddFolder} />
         <Section>
